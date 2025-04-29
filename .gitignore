@@ -1,0 +1,35 @@
+# Editor and IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.bak
+*.tmp
+*.swp
+*~
+
+# Dependency directories (if you add npm/yarn later)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build or distribution directories (if applicable)
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files (if you add them later)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

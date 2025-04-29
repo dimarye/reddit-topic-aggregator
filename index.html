@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Poppins&family=Arial&family=Times+New+Roman&family=Roboto" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+  <title>Aivazovski Spreadsheet</title>
+</head>
+<body>
+<header>
+  <div class="logo">🚤</div>
+  <div class="title">
+    Aivazovski Spreadsheet
+    <div class="subtitle">Let your data sail smoothly through the oceans of ideas.</div>
+  </div>
+  <div class="toolbar">
+    <div class="formatting">
+      <button id="undo">↺</button>
+      <select id="font-family">
+        <option value="Poppins">Poppins</option>
+        <option value="Arial">Arial</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Roboto">Roboto</option>
+      </select>
+      <input id="font-size" type="number" min="8" max="72" value="14" list="font-size-options" />
+      <datalist id="font-size-options">
+        <option value="12">
+        <option value="14">
+        <option value="16">
+        <option value="18">
+      </datalist>
+      <button id="bold"><b>B</b></button>
+      <button id="italic"><i>I</i></button>
+      <button id="underline"><u>U</u></button>
+      <button id="align-left">←</button>
+      <button id="align-center">↔</button>
+      <button id="align-right">→</button>
+      <button id="align-justify">≡</button>
+      <div class="color-picker">
+        <select id="background-color">
+          <option value="#FFFFFF"></option>
+          <option value="#FF0000"></option>
+          <option value="#0000FF"></option>
+          <option value="#008000"></option>
+          <option value="#FFFF00"></option>
+        </select>
+        <button id="fill-color">🪣</button>
+      </div>
+    </div>
+    <div class="edit-bar">
+      <input id="cell-editor" type="text" placeholder="Edit cell content" />
+    </div>
+  </div>
+</header>
+<main>
+  <div id="notification" class="notification"></div>
+  <div id="container"></div>
+</main>
+<script src="./script.js"></script>
+</body>
+</html>

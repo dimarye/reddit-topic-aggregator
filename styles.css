@@ -1,0 +1,242 @@
+/* Общие стили */
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(to bottom right, #A8DADC, #457B9D);
+    min-height: 100vh;
+}
+
+/* Header */
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(to right, #3B7EA1, #FFBC97);
+    color: #2D3142;
+    border-bottom: 2px solid #2D3142;
+    z-index: 1000;
+}
+
+.logo {
+    font-size: 40px;
+    margin-right: 15px;
+}
+
+.title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.subtitle {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    color: #2D3142;
+}
+
+.toolbar {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 600px;
+}
+
+.edit-bar {
+    width: 100%;
+}
+
+#cell-editor {
+    width: 100%;
+    padding: 4px;
+    font-size: 14px;
+    border: 1px solid #CED4DA;
+    border-radius: 4px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.formatting {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.formatting select, .formatting input, .formatting button {
+    padding: 4px 8px;
+    font-size: 14px;
+    border: 1px solid #CED4DA;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+}
+
+.formatting input[type="number"] {
+    width: 60px;
+}
+
+.formatting button {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.formatting button:hover {
+    background-color: #E6F3FF;
+}
+
+.color-picker {
+    display: flex;
+    gap: 5px;
+}
+
+#background-color {
+    width: 50px;
+    background-color: #FFFFFF; /* Начальный цвет */
+}
+
+#background-color option {
+    height: 20px;
+    padding: 0;
+}
+
+#background-color option[value="#FFFFFF"] {
+    background-color: #FFFFFF;
+}
+
+#background-color option[value="#FF0000"] {
+    background-color: #FF0000;
+}
+
+#background-color option[value="#0000FF"] {
+    background-color: #0000FF;
+}
+
+#background-color option[value="#008000"] {
+    background-color: #008000;
+}
+
+#background-color option[value="#FFFF00"] {
+    background-color: #FFFF00;
+}
+
+#background-color option:hover {
+    background-color: inherit !important; /* Убираем затемнение */
+}
+
+/* Основной контейнер */
+main {
+    padding: 20px;
+    margin-top: 150px; /* Отступ для фиксированного header */
+}
+
+/* Уведомление */
+.notification {
+    position: fixed;
+    top: 160px; /* Ниже header */
+    right: 20px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    z-index: 1000;
+}
+
+.notification.show {
+    opacity: 1;
+}
+
+/* Таблица: колонка с цифрами + 10 столбцов букв */
+#container {
+    display: grid;
+    grid-template-columns: 50px repeat(10, 300px); /* Фиксированная ширина столбцов */
+    grid-auto-rows: minmax(40px, auto); /* Увеличим минимальную высоту строк */
+    gap: 2px; /* Добавляем небольшой промежуток между ячейками */
+    background-color: #CED4DA; /* Цвет фона для промежутков */
+}
+
+/* Заголовки столбцов (буквы) */
+.header-cell {
+    background-color: #B2DFF7;
+    text-align: center;
+    padding: 4px 0;
+    font-weight: bold;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    cursor: pointer;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+}
+
+/* Метки строк (цифры) */
+.row-label {
+    background-color: #F8E8C1;
+    text-align: center;
+    padding: 4px 0;
+    font-weight: bold;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    cursor: pointer;
+    box-sizing: border-box;
+    height: 100%;
+    margin: 0;
+}
+
+/* Ячейки */
+.cell {
+    display: block; /* Меняем с flex на block */
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    position: relative; /* Для правильного наложения z-index */
+}
+
+.cell div[contenteditable] {
+    width: 100%;
+    min-height: 40px; /* Увеличим минимальную высоту ячейки */
+    min-width: 100px; /* Минимальная ширина ячейки */
+    max-width: 300px; /* Максимальная ширина ячейки */
+    max-height: 200px; /* Максимальная высота ячейки */
+    box-sizing: border-box;
+    border: none; /* Убираем границы, чтобы не создавать промежутков */
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 14px;
+    font-family: 'Poppins', sans-serif;
+    background-color: white;
+    transition: box-shadow 0.3s;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    overflow: auto; /* Добавляем прокрутку, если содержимое превышает размеры */
+    display: block; /* Явно задаём блочный элемент */
+    box-shadow: 0 0 0 1px #CED4DA; /* Заменяем border на box-shadow */
+    position: relative; /* Для z-index */
+    z-index: 1; /* Базовый уровень для невыделенных ячеек */
+}
+
+.cell div[contenteditable]:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px #00bcd4, 0 0 8px rgba(0, 188, 212, 0.5); /* Увеличиваем тень */
+    z-index: 2; /* Поднимаем над невыделенными ячейками */
+}
+
+.cell div[contenteditable].selected {
+    box-shadow: 0 0 0 4px #1E90FF, 0 0 8px rgba(30, 144, 255, 0.5); /* Увеличиваем тень */
+    z-index: 2; /* Поднимаем над невыделенными ячейками */
+}
+
+.cell div[contenteditable].active {
+    box-shadow: 0 0 0 4px #00bcd4, 0 0 8px rgba(0, 188, 212, 0.5); /* Увеличиваем тень */
+    z-index: 2; /* Поднимаем над невыделенными ячейками */
+}
