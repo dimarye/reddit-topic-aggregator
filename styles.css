@@ -1,242 +1,211 @@
-/* Общие стили */
-body {
+* {
     margin: 0;
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(to bottom right, #A8DADC, #457B9D);
-    min-height: 100vh;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* Header */
-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    align-items: center;
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+:root {
+    --main-bg-color: #0a0a23; /* Dark Tron-like background */
+    --neon-blue: #00d4ff; /* Tron primary neon */
+    --neon-orange: #ff3d00; /* Tron secondary neon */
+    --section-bg-color: rgba(10, 10, 35, 0.9); /* Semi-transparent dark blue */
+    --glow-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff, 0 0 30px #00d4ff;
+}
+
+body {
+    background-color: var(--main-bg-color);
+    background-image: linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px; /* Tron grid pattern */
+    font-family: 'Orbitron', sans-serif;
+}
+
+.start-screen {
+    background-color: var(--section-bg-color);
+    width: 100%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-right: -50%;
+    transform: translate(-50%, -50%);
+    border-radius: 10px;
     padding: 20px;
-    background: linear-gradient(to right, #3B7EA1, #FFBC97);
-    color: #2D3142;
-    border-bottom: 2px solid #2D3142;
-    z-index: 1000;
+    padding-bottom: 5px;
+    border: 2px solid var(--neon-blue);
+    box-shadow: var(--glow-shadow);
 }
 
-.logo {
-    font-size: 40px;
-    margin-right: 15px;
+.main-title {
+    text-align: center;
+    color: var(--neon-blue);
+    text-shadow: 0 0 5px var(--neon-blue);
+    font-size: 2.5rem;
+    letter-spacing: 2px;
 }
 
-.title {
-    font-family: 'Playfair Display', serif;
-    font-size: 28px;
-    font-weight: bold;
+.instructions {
+    text-align: center;
+    font-size: 1.2rem;
+    margin: 15px;
+    line-height: 2rem;
+    color: #ffffff;
+    text-shadow: 0 0 3px var(--neon-blue);
 }
 
-.subtitle {
-    font-family: 'Poppins', sans-serif;
-    font-size: 14px;
-    color: #2D3142;
-}
-
-.toolbar {
-    margin-left: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 100%;
-    max-width: 600px;
-}
-
-.edit-bar {
-    width: 100%;
-}
-
-#cell-editor {
-    width: 100%;
-    padding: 4px;
-    font-size: 14px;
-    border: 1px solid #CED4DA;
-    border-radius: 4px;
-    font-family: 'Poppins', sans-serif;
-}
-
-.formatting {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-.formatting select, .formatting input, .formatting button {
-    padding: 4px 8px;
-    font-size: 14px;
-    border: 1px solid #CED4DA;
-    border-radius: 4px;
-    background-color: white;
+.btn {
     cursor: pointer;
+    width: 120px;
+    margin: 10px auto;
+    color: #ffffff;
+    font-size: 18px;
+    background-color: transparent;
+    border: 2px solid var(--neon-orange);
+    border-radius: 5px;
+    padding: 10px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 0 10px var(--neon-orange);
+    transition: all 0.3s ease;
 }
 
-.formatting input[type="number"] {
-    width: 60px;
+.btn:hover {
+    background-color: var(--neon-orange);
+    color: var(--main-bg-color);
+    box-shadow: 0 0 15px var(--neon-orange), 0 0 25px var(--neon-orange);
+    transform: translateY(-2px);
 }
 
-.formatting button {
-    width: 30px;
-    height: 30px;
+.btn:active {
+    transform: scale(0.95);
+}
+
+.btn-container {
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.formatting button:hover {
-    background-color: #E6F3FF;
+.checkpoint-screen {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    background-color: var(--section-bg-color);
+    border-radius: 10px;
+    padding: 15px;
+    border: 2px solid var(--neon-blue);
+    box-shadow: var(--glow-shadow);
+    display: none;
+    animation: fadeIn 0.5s ease-in;
 }
 
-.color-picker {
-    display: flex;
-    gap: 5px;
+.checkpoint-screen p {
+    color: var(--neon-blue);
+    text-shadow: 0 0 5px var(--neon-blue);
+    font-size: 1.5rem;
 }
 
-#background-color {
-    width: 50px;
-    background-color: #FFFFFF; /* Начальный цвет */
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
 }
 
-#background-color option {
-    height: 20px;
-    padding: 0;
-}
-
-#background-color option[value="#FFFFFF"] {
-    background-color: #FFFFFF;
-}
-
-#background-color option[value="#FF0000"] {
-    background-color: #FF0000;
-}
-
-#background-color option[value="#0000FF"] {
-    background-color: #0000FF;
-}
-
-#background-color option[value="#008000"] {
-    background-color: #008000;
-}
-
-#background-color option[value="#FFFF00"] {
-    background-color: #FFFF00;
-}
-
-#background-color option:hover {
-    background-color: inherit !important; /* Убираем затемнение */
-}
-
-/* Основной контейнер */
-main {
-    padding: 20px;
-    margin-top: 150px; /* Отступ для фиксированного header */
-}
-
-/* Уведомление */
-.notification {
+.hud {
     position: fixed;
-    top: 160px; /* Ниже header */
+    top: 10px;
     right: 20px;
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 4px;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-    z-index: 1000;
-}
-
-.notification.show {
-    opacity: 1;
-}
-
-/* Таблица: колонка с цифрами + 10 столбцов букв */
-#container {
-    display: grid;
-    grid-template-columns: 50px repeat(10, 300px); /* Фиксированная ширина столбцов */
-    grid-auto-rows: minmax(40px, auto); /* Увеличим минимальную высоту строк */
-    gap: 2px; /* Добавляем небольшой промежуток между ячейками */
-    background-color: #CED4DA; /* Цвет фона для промежутков */
-}
-
-/* Заголовки столбцов (буквы) */
-.header-cell {
-    background-color: #B2DFF7;
-    text-align: center;
-    padding: 4px 0;
+    background-color: rgba(10, 10, 35, 0.8);
+    padding: 10px 16px;
+    border-radius: 5px;
+    border: 1px solid var(--neon-blue);
+    color: var(--neon-blue);
+    font-size: 16px;
     font-weight: bold;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    cursor: pointer;
-    box-sizing: border-box;
-    width: 100%;
-    margin: 0;
+    text-shadow: 0 0 3px var(--neon-blue);
+    z-index: 10;
 }
 
-/* Метки строк (цифры) */
-.row-label {
-    background-color: #F8E8C1;
+.restart-screen {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    top: 40%;
+    width: 100%;
+    max-width: 400px;
     text-align: center;
-    padding: 4px 0;
-    font-weight: bold;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    cursor: pointer;
-    box-sizing: border-box;
-    height: 100%;
-    margin: 0;
+    background-color: var(--section-bg-color);
+    border-radius: 10px;
+    padding: 20px;
+    border: 2px solid var(--neon-orange);
+    box-shadow: 0 0 10px var(--neon-orange);
+    display: none;
 }
 
-/* Ячейки */
-.cell {
-    display: block; /* Меняем с flex на block */
-    width: 100%;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    position: relative; /* Для правильного наложения z-index */
+.restart-screen p {
+    color: var(--neon-orange);
+    text-shadow: 0 0 5px var(--neon-orange);
+    font-size: 1.5rem;
 }
 
-.cell div[contenteditable] {
-    width: 100%;
-    min-height: 40px; /* Увеличим минимальную высоту ячейки */
-    min-width: 100px; /* Минимальная ширина ячейки */
-    max-width: 300px; /* Максимальная ширина ячейки */
-    max-height: 200px; /* Максимальная высота ячейки */
-    box-sizing: border-box;
-    border: none; /* Убираем границы, чтобы не создавать промежутков */
-    border-radius: 6px;
-    padding: 4px;
-    font-size: 14px;
-    font-family: 'Poppins', sans-serif;
-    background-color: white;
-    transition: box-shadow 0.3s;
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
-    overflow: auto; /* Добавляем прокрутку, если содержимое превышает размеры */
-    display: block; /* Явно задаём блочный элемент */
-    box-shadow: 0 0 0 1px #CED4DA; /* Заменяем border на box-shadow */
-    position: relative; /* Для z-index */
-    z-index: 1; /* Базовый уровень для невыделенных ячеек */
+#canvas {
+    display: none;
+    background-image: linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px; /* Tron grid on canvas */
 }
 
-.cell div[contenteditable]:focus {
-    outline: none;
-    box-shadow: 0 0 0 4px #00bcd4, 0 0 8px rgba(0, 188, 212, 0.5); /* Увеличиваем тень */
-    z-index: 2; /* Поднимаем над невыделенными ячейками */
+.lives-container {
+    position: fixed;
+    top: 10px;
+    left: 20px;
+    display: flex;
+    gap: 8px;
+    z-index: 20;
+    font-size: 24px;
+    user-select: none;
+    background: rgba(10, 10, 35, 0.8);
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid var(--neon-blue);
 }
 
-.cell div[contenteditable].selected {
-    box-shadow: 0 0 0 4px #1E90FF, 0 0 8px rgba(30, 144, 255, 0.5); /* Увеличиваем тень */
-    z-index: 2; /* Поднимаем над невыделенными ячейками */
+.lives-container .heart {
+    color: var(--neon-orange);
+    text-shadow: 0 0 5px var(--neon-orange);
+    cursor: default;
+    transition: opacity 0.3s ease;
 }
 
-.cell div[contenteditable].active {
-    box-shadow: 0 0 0 4px #00bcd4, 0 0 8px rgba(0, 188, 212, 0.5); /* Увеличиваем тень */
-    z-index: 2; /* Поднимаем над невыделенными ячейками */
+.lives-container .heart:not(.lost) {
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+.lives-container .heart.lost {
+    opacity: 0.3;
+    text-shadow: none;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@media (min-width: 768px) {
+    .start-screen {
+        width: 60%;
+        max-width: 700px;
+    }
+
+    .checkpoint-screen {
+        max-width: 400px;
+    }
 }

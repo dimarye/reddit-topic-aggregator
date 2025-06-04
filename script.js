@@ -1,629 +1,448 @@
-// Помощник для создания меток
-function createLabel(text, className) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    div.className = className;
-    return div;
-}
+const startBtn = document.getElementById("start-btn");
+const canvas = document.getElementById("canvas");
+const startScreen = document.querySelector(".start-screen");
+const checkpointScreen = document.querySelector(".checkpoint-screen");
+const checkpointMessage = document.querySelector(".checkpoint-screen > p");
+const checkpointProgress = document.getElementById("checkpoint-progress");
+const restartScreen = document.querySelector(".restart-screen");
+const restartBtn = document.getElementById("restart-btn");
+const livesContainer = document.getElementById("lives");
+const jumpSound = new Audio("jump.wav");
+const checkpointSound = new Audio("checkpoint.wav");
+const goalSound = new Audio("goal.wav");
 
-// Преобразование инфиксных операций
-const infixToFunction = { "+": (x,y)=>x+y, "-": (x,y)=>x-y, "*": (x,y)=>x*y, "/": (x,y)=>x/y };
+const ctx = canvas.getContext("2d");
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+const gravity = 0.5;
+let isCheckpointCollisionDetectionActive = true;
+let lives = 3;
 
-const infixEval = (str, rx) =>
-    str.replace(rx, (_m,a,op,b)=>infixToFunction[op](parseFloat(a),parseFloat(b)));
-
-const highPrecedence = s => { const rx=/([\d.]+)([*\/])([\d.]+)/; const s2=infixEval(s,rx); return s2===s?s:highPrecedence(s2); };
-
-// Функции для формул
-const isEven=n=>n%2===0;
-const sum=a=>a.reduce((x,y)=>x+y,0);
-const average=a=>sum(a)/a.length;
-const median=a=>{ const s=a.slice().sort((x,y)=>x-y),m=s.length/2-1; return isEven(s.length)?average([s[m],s[m+1]]):s[Math.ceil(m)]; };
-const spreadsheetFunctions = {
-    sum, average, median,
-    even:a=>a.filter(isEven),
-    someeven:a=>a.some(isEven),
-    everyeven:a=>a.every(isEven),
-    firsttwo:a=>a.slice(0,2),
-    lasttwo:a=>a.slice(-2),
-    has2:a=>a.includes(2),
-    increment:a=>a.map(n=>n+1),
-    random:([x,y])=>Math.floor(Math.random()*(y-x+1))+x,
-    range:a=>range(...a),
-    nodupes:a=>[...new Set(a)],
-    "":x=>x
-};
-const applyFunction=str=>{
-    const s1=highPrecedence(str), s2=infixEval(s1,/([\d.]+)([+-])([\d.]+)/);
-    return s2.replace(/([a-z0-9]*)\(([0-9., ]*)\)(?!.*\()/i,(m,fn,args)=>{
-        const f=spreadsheetFunctions[fn.toLowerCase()]; return f?f(args.split(",").map(parseFloat)):m;
-    });
-};
-const range=(a,b)=>Array(b-a+1).fill(a).map((x,i)=>x+i);
-const charRange=(s,e)=>range(s.charCodeAt(0),e.charCodeAt(0)).map(c=>String.fromCharCode(c));
-
-const evalFormula=(expr,cells)=>{
-    const getVal=id=>{ const el=cells.find(c=>c.id===id); return el?el.textContent:""; };
-    const tmp=expr.replace(/([A-J])([1-9][0-9]?):([A-J])([1-9][0-9]?)/gi,(_,c1,n1,c2,n2)=>
-        range(parseInt(n1),parseInt(n2)).flatMap(r=>charRange(c1,c2).map(ch=>getVal(ch+r))).join(",")
-    );
-    const replaced=tmp.replace(/[A-J][1-9][0-9]?/gi,m=>getVal(m));
-    const applied=applyFunction(replaced);
-    return applied===expr?applied:evalFormula(applied,cells);
+const proportionalSize = (size) => {
+    return innerHeight < 500 ? Math.ceil((size / 500) * innerHeight) : size;
 };
 
-// Функция дебонсинга
-function debounce(func, wait) {
-    let timeout;
-    return function (...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-}
+class Player {
+    constructor() {
+        this.position = { x: proportionalSize(10), y: proportionalSize(400) };
+        this.velocity = { x: 0, y: 0 };
+        this.width = proportionalSize(40);
+        this.height = proportionalSize(40);
+    }
 
-// Уведомления
-function showNotification(message) {
-    const notification = document.getElementById('notification');
-    notification.textContent = message;
-    notification.classList.add('show');
-    setTimeout(() => {
-        notification.classList.remove('show');
-    }, 2000);
-}
-
-// Синхронизация высоты строки
-function syncRowHeight(row) {
-    const cells = document.querySelectorAll(`div[contenteditable][id$="${row}"]`);
-    let maxHeight = 40; // Минимальная высота 40px
-    cells.forEach(c => {
-        c.style.height = "auto";
-        const contentHeight = Math.max(c.scrollHeight, 40); // Учитываем минимальную высоту
-        if (contentHeight > maxHeight) {
-            maxHeight = contentHeight;
+    draw() {
+        ctx.save();
+        ctx.fillStyle = "#00d4ff";
+        ctx.shadowColor = "#00d4ff";
+        ctx.shadowBlur = 15;
+        if (this.velocity.y < 0) {
+            ctx.beginPath();
+            ctx.arc(this.position.x + this.width / 2, this.position.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
         }
-    });
-    maxHeight = Math.min(maxHeight, 200); // Ограничиваем максимальную высоту
-    cells.forEach(c => {
-        c.style.height = `${maxHeight}px`;
-        console.log(`Устанавливаем высоту ячейки в строке ${row}: ${maxHeight}px`); // Логирование для отладки
-    });
+        ctx.restore();
+    }
+
+    update() {
+        this.draw();
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+
+        if (this.position.y + this.height + this.velocity.y <= canvas.height) {
+            if (this.position.y < 0) {
+                this.position.y = 0;
+                this.velocity.y = gravity;
+            }
+            this.velocity.y += gravity;
+        } else {
+            this.velocity.y = 0;
+        }
+
+        if (this.position.x < this.width) {
+            this.position.x = this.width;
+        }
+
+        if (this.position.x >= canvas.width - this.width * 2) {
+            this.position.x = canvas.width - this.width * 2;
+        }
+    }
 }
 
-// Обработка формул
-const evaluateCellFormula = (cell) => {
-    if (cell.textContent.startsWith("=")) {
-        const cells = Array.from(document.querySelectorAll("div[contenteditable]"));
-        try {
-            const result = evalFormula(cell.textContent.slice(1), cells);
-            cell.textContent = result;
-            const editor = document.getElementById('cell-editor');
-            editor.value = result;
-        } catch (error) {
-            console.error(`Ошибка при вычислении формулы в ячейке ${cell.id}:`, error);
-            cell.textContent = "#ERROR";
+class Platform {
+    constructor(x, y) {
+        this.position = { x, y };
+        this.width = 200;
+        this.height = proportionalSize(40);
+    }
+
+    draw() {
+        ctx.save();
+        ctx.fillStyle = "#00d4ff";
+        ctx.strokeStyle = "#00d4ff";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "#00d4ff";
+        ctx.shadowBlur = 10;
+        ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+        ctx.strokeRect(this.position.x, this.position.y, this.width, this.height);
+        ctx.restore();
+    }
+}
+
+class CheckPoint {
+    constructor(x, y, z) {
+        this.position = { x, y };
+        this.width = proportionalSize(40);
+        this.height = proportionalSize(70);
+        this.claimed = false;
+        this.scale = 1;
+    }
+
+    draw() {
+        if (!this.claimed) {
+            ctx.save();
+            ctx.fillStyle = "#ff3d00";
+            ctx.strokeStyle = "#ff3d00";
+            ctx.lineWidth = 2;
+            ctx.shadowColor = "#ff3d00";
+            ctx.shadowBlur = 15;
+            ctx.fillRect(this.position.x, this.position.y, this.width * this.scale, this.height * this.scale);
+            ctx.strokeRect(this.position.x, this.position.y, this.width * this.scale, this.height * this.scale);
+            ctx.restore();
         }
+    }
+
+    claim() {
+        this.claimed = true;
+        let animationFrame;
+        const particles = [];
+        for (let i = 0; i < 30; i++) {
+            particles.push({
+                x: this.position.x + this.width / 2,
+                y: this.position.y + this.height / 2,
+                vx: (Math.random() - 0.5) * 6,
+                vy: (Math.random() - 0.5) * 6,
+                radius: Math.random() * 4 + 2,
+                alpha: 1
+            });
+        }
+        const animateParticles = () => {
+            ctx.save();
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.02;
+                ctx.fillStyle = `rgba(255, 61, 0, ${p.alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.restore();
+            if (particles.some(p => p.alpha > 0)) {
+                animationFrame = requestAnimationFrame(animateParticles);
+            } else {
+                cancelAnimationFrame(animationFrame);
+            }
+        };
+        animateParticles();
+        const animateShrink = () => {
+            if (this.scale > 0.01) {
+                this.scale -= 0.01;
+                animationFrame = requestAnimationFrame(animateShrink);
+            } else {
+                cancelAnimationFrame(animationFrame);
+                this.width = 0;
+                this.height = 0;
+                this.position.y = Infinity;
+            }
+        };
+        animateShrink();
+    }
+}
+
+class Enemy {
+    constructor(x, y, vertical = false) {
+        this.position = { x, y };
+        this.width = proportionalSize(40);
+        this.height = proportionalSize(40);
+        this.speed = 2;
+        this.direction = 1;
+        this.vertical = vertical;
+
+        if (vertical) {
+            this.minY = y - 50;
+            this.maxY = y + 50;
+        }
+    }
+
+    setBounds(minX, maxX) {
+        this.minX = minX;
+        this.maxX = maxX;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.fillStyle = "#ff3d00";
+        ctx.strokeStyle = "#ff3d00";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "#ff3d00";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(this.position.x + this.width / 2, this.position.y);
+        ctx.lineTo(this.position.x + this.width, this.position.y + this.height);
+        ctx.lineTo(this.position.x, this.position.y + this.height);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    update() {
+        this.draw();
+
+        if (this.vertical) {
+            this.position.y += this.speed * this.direction;
+            if (this.position.y <= this.minY || this.position.y + this.height >= this.maxY) {
+                this.direction *= -1;
+            }
+        } else {
+            this.position.x += this.speed * this.direction;
+            if (this.position.x <= this.minX || this.position.x + this.width >= this.maxX) {
+                this.direction *= -1;
+            }
+        }
+    }
+}
+
+const player = new Player();
+
+const platformPositions = [
+    { x: 500, y: proportionalSize(450) },
+    { x: 700, y: proportionalSize(400) },
+    { x: 850, y: proportionalSize(350) },
+    { x: 900, y: proportionalSize(350) },
+    { x: 1050, y: proportionalSize(150) },
+    { x: 2500, y: proportionalSize(450) },
+    { x: 2900, y: proportionalSize(400) },
+    { x: 3150, y: proportionalSize(350) },
+    { x: 3900, y: proportionalSize(450) },
+    { x: 4200, y: proportionalSize(400) },
+    { x: 4400, y: proportionalSize(200) },
+    { x: 4700, y: proportionalSize(150) },
+];
+
+const platforms = platformPositions.map(p => new Platform(p.x, p.y));
+
+const checkpointPositions = [
+    { x: 1170, y: proportionalSize(80), z: 1 },
+    { x: 2900, y: proportionalSize(330), z: 2 },
+    { x: 4800, y: proportionalSize(80), z: 3 },
+];
+
+const checkpoints = checkpointPositions.map(c => new CheckPoint(c.x, c.y, c.z));
+
+const enemies = [];
+
+const enemy1 = new Enemy(1400, proportionalSize(410));
+enemy1.setBounds(1400, 1600);
+enemies.push(enemy1);
+
+const enemy2 = new Enemy(3300, proportionalSize(310));
+enemy2.setBounds(3300, 3550);
+enemies.push(enemy2);
+
+const spawnEnemiesForCheckpoint = (index) => {
+    if (index === 0) return;
+    for (let i = 0; i < index * 2; i++) {
+        const x = 1000 + Math.random() * 3000;
+        const y = proportionalSize(400 - Math.random() * 200);
+        const vertical = Math.random() > 0.5;
+        const enemy = new Enemy(x, y, vertical);
+        if (!vertical) {
+            enemy.setBounds(x - 100, x + 100);
+        }
+        enemies.push(enemy);
     }
 };
 
-// При вводе — автоподбор высоты
-const debouncedSync = debounce((row) => {
-    syncRowHeight(row);
-}, 300);
+const updateLives = () => {
+    const hearts = livesContainer.querySelectorAll(".heart");
+    hearts.forEach((heart, index) => {
+        if (index < lives) {
+            heart.classList.remove("lost");
+        } else {
+            heart.classList.add("lost");
+        }
+    });
+};
 
-function onInput(e) {
-    const el = e.target;
-    const row = el.id.match(/[A-J]([0-9]+)/)[1];
-    const editor = document.getElementById('cell-editor');
-    editor.value = el.textContent;
-    debouncedSync(row);
-}
+const animate = () => {
+    requestAnimationFrame(animate);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-// Управление выделением ячеек
-let isSelecting = false;
-let startCell = null;
-let lastActiveCell = null; // Для сохранения активной ячейки
+    platforms.forEach(p => p.draw());
+    checkpoints.forEach(cp => cp.draw());
+    enemies.forEach(enemy => enemy.update());
+    player.update();
 
-// Стек для отмены действий
-const undoStack = [];
-const maxUndoSteps = 50;
-
-// Сохранение текущего состояния изменённых ячеек
-function saveState(changedCells = null) {
-    if (changedCells) {
-        undoStack.push(changedCells.map(c => ({
-            id: c.id,
-            html: c.innerHTML,
-            style: {
-                fontFamily: c.style.fontFamily || '',
-                fontSize: c.style.fontSize || '',
-                fontWeight: c.style.fontWeight || '',
-                fontStyle: c.style.fontStyle || '',
-                textDecoration: c.style.textDecoration || '',
-                textAlign: c.style.textAlign || '',
-                backgroundColor: c.style.backgroundColor || ''
-            }
-        })));
+    if (keys.rightKey.pressed && player.position.x < proportionalSize(400)) {
+        player.velocity.x = 5;
+    } else if (keys.leftKey.pressed && player.position.x > proportionalSize(100)) {
+        player.velocity.x = -5;
     } else {
-        const cells = Array.from(document.querySelectorAll('div[contenteditable]')).map(c => ({
-            id: c.id,
-            html: c.innerHTML,
-            style: {
-                fontFamily: c.style.fontFamily || '',
-                fontSize: c.style.fontSize || '',
-                fontWeight: c.style.fontWeight || '',
-                fontStyle: c.style.fontStyle || '',
-                textDecoration: c.style.textDecoration || '',
-                textAlign: c.style.textAlign || '',
-                backgroundColor: c.style.backgroundColor || ''
+        player.velocity.x = 0;
+
+        if (keys.rightKey.pressed && isCheckpointCollisionDetectionActive) {
+            platforms.forEach(p => p.position.x -= 5);
+            checkpoints.forEach(cp => cp.position.x -= 5);
+            enemies.forEach(e => {
+                e.position.x -= 5;
+                if (!e.vertical) {
+                    e.minX -= 5;
+                    e.maxX -= 5;
+                }
+            });
+        } else if (keys.leftKey.pressed && isCheckpointCollisionDetectionActive) {
+            platforms.forEach(p => p.position.x += 5);
+            checkpoints.forEach(cp => cp.position.x += 5);
+            enemies.forEach(e => {
+                e.position.x += 5;
+                if (!e.vertical) {
+                    e.minX += 5;
+                    e.maxX += 5;
+                }
+            });
+        }
+    }
+
+    platforms.forEach(p => {
+        const above = player.position.y + player.height <= p.position.y;
+        const fallingOnto = player.position.y + player.height + player.velocity.y >= p.position.y;
+        const withinX = player.position.x >= p.position.x - player.width / 2 &&
+            player.position.x <= p.position.x + p.width - player.width / 3;
+
+        if (above && fallingOnto && withinX) {
+            player.velocity.y = 0;
+            return;
+        }
+
+        const overlappingY = player.position.y + player.height >= p.position.y &&
+            player.position.y <= p.position.y + p.height;
+
+        if (withinX && overlappingY) {
+            player.position.y = p.position.y + player.height;
+            player.velocity.y = gravity;
+        }
+    });
+
+    checkpoints.forEach((checkpoint, index, checkpoints) => {
+        const validCollision = player.position.x >= checkpoint.position.x &&
+            player.position.y >= checkpoint.position.y &&
+            player.position.y + player.height <= checkpoint.position.y + checkpoint.height &&
+            isCheckpointCollisionDetectionActive &&
+            player.position.x - player.width <= checkpoint.position.x - checkpoint.width + player.width * 0.9 &&
+            (index === 0 || checkpoints[index - 1].claimed);
+
+        if (validCollision) {
+            checkpoint.claim();
+
+            const claimedCount = checkpoints.filter(cp => cp.claimed).length;
+            checkpointProgress.textContent = `Node: ${claimedCount} of ${checkpoints.length}`;
+
+            checkpointSound.currentTime = 0;
+            checkpointSound.play();
+
+            spawnEnemiesForCheckpoint(index);
+
+            if (index === checkpoints.length - 1) {
+                goalSound.currentTime = 0;
+                goalSound.play();
+
+                isCheckpointCollisionDetectionActive = false;
+                showCheckpointScreen("Grid Mastered!");
+                movePlayer("ArrowRight", 0, false);
+                restartScreen.style.display = "block";
+            } else {
+                showCheckpointScreen("Node Synced!");
             }
-        }));
-        undoStack.push(cells);
-    }
-    if (undoStack.length > maxUndoSteps) {
-        undoStack.shift(); // Удаляем старые состояния
-    }
-}
-
-// Применение состояния из стека
-function undo() {
-    if (undoStack.length === 0) return;
-    const lastState = undoStack.pop();
-    const updatedRows = new Set();
-    lastState.forEach(({ id, html, style }) => {
-        const cell = document.getElementById(id);
-        if (cell) {
-            cell.innerHTML = html;
-            cell.style.fontFamily = style.fontFamily;
-            cell.style.fontSize = style.fontSize;
-            cell.style.fontWeight = style.fontWeight;
-            cell.style.fontStyle = style.fontStyle;
-            cell.style.textDecoration = style.textDecoration;
-            cell.style.textAlign = style.textAlign;
-            cell.style.backgroundColor = style.backgroundColor;
-            const row = id.match(/[A-J]([0-9]+)/)[1];
-            updatedRows.add(row);
         }
     });
-    updatedRows.forEach(row => syncRowHeight(row));
-    showNotification("Action canceled");
-}
 
-function clearSelection() {
-    document.querySelectorAll('div[contenteditable].selected').forEach(c => c.classList.remove('selected'));
-}
+    enemies.forEach(enemy => {
+        const isColliding =
+            player.position.x < enemy.position.x + enemy.width &&
+            player.position.x + player.width > enemy.position.x &&
+            player.position.y < enemy.position.y + enemy.height &&
+            player.position.y + player.height > enemy.position.y;
 
-function selectRange(startId, endId) {
-    clearSelection();
-    const startCol = startId.match(/([A-J])[0-9]+/)[1];
-    const startRow = parseInt(startId.match(/[A-J]([0-9]+)/)[1]);
-    const endCol = endId.match(/([A-J])[0-9]+/)[1];
-    const endRow = parseInt(endId.match(/[A-J]([0-9]+)/)[1]);
-
-    const colStart = Math.min(startCol.charCodeAt(0), endCol.charCodeAt(0));
-    const colEnd = Math.max(startCol.charCodeAt(0), endCol.charCodeAt(0));
-    const rowStart = Math.min(startRow, endRow);
-    const rowEnd = Math.max(endRow, startRow);
-
-    for (let r = rowStart; r <= rowEnd; r++) {
-        for (let c = colStart; c <= colEnd; c++) {
-            const id = String.fromCharCode(c) + r;
-            const cell = document.getElementById(id);
-            if (cell) cell.classList.add('selected');
-        }
-    }
-}
-
-function selectRow(row) {
-    clearSelection();
-    const cells = Array.from(document.querySelectorAll('div[contenteditable]'))
-        .filter(c => {
-            const rowNum = c.id.match(/[A-J](\d+)/)[1];
-            return parseInt(rowNum) === parseInt(row);
-        });
-    cells.forEach(c => c.classList.add('selected'));
-}
-
-function selectColumn(col) {
-    clearSelection();
-    document.querySelectorAll(`div[contenteditable][id^="${col}"]`).forEach(c => c.classList.add('selected'));
-}
-
-// Копирование и вставка
-function copySelectedCells() {
-    const selected = Array.from(document.querySelectorAll('div[contenteditable].selected'));
-    if (!selected.length) return;
-
-    const rows = [];
-    const rowSet = new Set();
-    const colSet = new Set();
-    selected.forEach(c => {
-        const row = parseInt(c.id.match(/[A-J]([0-9]+)/)[1]);
-        const col = c.id.match(/([A-J])[0-9]+/)[1];
-        rowSet.add(row);
-        colSet.add(col);
-    });
-
-    const rowNums = Array.from(rowSet).sort((a, b) => a - b);
-    const colLetters = Array.from(colSet).sort();
-    rowNums.forEach(row => {
-        const rowData = colLetters.map(col => {
-            const cell = document.getElementById(col + row);
-            if (!cell) return '';
-            let value = cell.textContent;
-            value = value.replace(/\n/g, '\\n').replace(/\t/g, '\\t');
-            return value;
-        });
-        rows.push(rowData.join('\t'));
-    });
-
-    const text = rows.join('\n');
-    navigator.clipboard.writeText(text).then(() => {
-        showNotification(selected.length === 1 ? "Ячейка скопирована" : "Ячейки скопированы");
-    });
-}
-
-function pasteToCells(startCellId, clipboardText) {
-    saveState();
-    const cells = Array.from(document.querySelectorAll('div[contenteditable]'));
-    const startCol = startCellId.match(/([A-J])[0-9]+/)[1];
-    const startRow = parseInt(startCellId.match(/[A-J]([0-9]+)/)[1]);
-    const startColIndex = startCol.charCodeAt(0) - 'A'.charCodeAt(0);
-
-    if (clipboardText.includes('\n') || clipboardText.includes('\t')) {
-        showNotification("Вставленный текст содержит переносы строк или табуляцию, это может повлиять на форматирование");
-    }
-
-    if (!clipboardText.includes('\t') && !clipboardText.includes('\n')) {
-        const cell = document.getElementById(startCellId);
-        if (cell) {
-            cell.textContent = clipboardText;
-            if (clipboardText.startsWith("=")) {
-                cell.textContent = evalFormula(clipboardText.slice(1), cells);
+        if (isColliding && isCheckpointCollisionDetectionActive) {
+            lives--;
+            updateLives();
+            if (lives <= 0) {
+                showCheckpointScreen("System Crash!");
+                isCheckpointCollisionDetectionActive = false;
+                restartScreen.style.display = "block";
+            } else {
+                player.position.x = proportionalSize(10);
+                player.position.y = proportionalSize(400);
+                player.velocity.x = 0;
+                player.velocity.y = 0;
             }
-            syncRowHeight(startRow);
         }
+    });
+};
+
+const keys = {
+    rightKey: { pressed: false },
+    leftKey: { pressed: false },
+};
+
+const movePlayer = (key, xVelocity, isPressed) => {
+    if (!isCheckpointCollisionDetectionActive) {
+        player.velocity.x = 0;
+        player.velocity.y = 0;
         return;
     }
 
-    const rows = [];
-    let currentRow = '';
-    let i = 0;
-    while (i < clipboardText.length) {
-        if (clipboardText[i] === '\n' && (i === 0 || clipboardText[i - 1] !== '\\')) {
-            rows.push(currentRow);
-            currentRow = '';
-            i++;
-        } else if (clipboardText[i] === '\\' && i + 1 < clipboardText.length && (clipboardText[i + 1] === 'n' || clipboardText[i + 1] === 't')) {
-            currentRow += clipboardText[i + 1] === 'n' ? '\n' : '\t';
-            i += 2;
-        } else {
-            currentRow += clipboardText[i];
-            i++;
-        }
+    switch (key) {
+        case "ArrowLeft":
+            keys.leftKey.pressed = isPressed;
+            if (xVelocity === 0) player.velocity.x = 0;
+            player.velocity.x -= xVelocity;
+            break;
+        case "ArrowUp":
+        case " ":
+        case "Spacebar":
+            player.velocity.y -= 8;
+            jumpSound.currentTime = 0;
+            jumpSound.play();
+            break;
+        case "ArrowRight":
+            keys.rightKey.pressed = isPressed;
+            if (xVelocity === 0) player.velocity.x = 0;
+            player.velocity.x += xVelocity;
+            break;
     }
-    if (currentRow) rows.push(currentRow);
-
-    const parsedRows = rows.map(row => {
-        const cells = [];
-        let current = '';
-        let j = 0;
-        while (j < row.length) {
-            if (row[j] === '\t' && (j === 0 || row[j - 1] !== '\\')) {
-                cells.push(current);
-                current = '';
-                j++;
-            } else if (row[j] === '\\' && j + 1 < row.length && (row[j + 1] === 'n' || row[j + 1] === 't')) {
-                current += row[j + 1] === 'n' ? '\n' : '\t';
-                j += 2;
-            } else {
-                current += row[j];
-                j++;
-            }
-        }
-        cells.push(current);
-        return cells;
-    });
-
-    const maxRows = 99;
-    const maxCols = 'J'.charCodeAt(0) - 'A'.charCodeAt(0) + 1;
-
-    const updatedRows = new Set();
-
-    parsedRows.forEach((rowData, rowIndex) => {
-        if (startRow + rowIndex > maxRows) return;
-        rowData.forEach((value, colIndex) => {
-            const colIndexTotal = startColIndex + colIndex;
-            const colLetter = String.fromCharCode('A'.charCodeAt(0) + colIndexTotal);
-            if (colLetter > 'J') return;
-            const cellId = colLetter + (startRow + rowIndex);
-            const cell = document.getElementById(cellId);
-            if (cell) {
-                cell.textContent = value;
-                updatedRows.add(startRow + rowIndex);
-                if (value.startsWith("=")) {
-                    cell.textContent = evalFormula(value.slice(1), cells);
-                }
-            }
-        });
-    });
-
-    updatedRows.forEach(row => syncRowHeight(row));
-}
-
-// Форматирование ячеек
-function applyFormatting(property, value, toggle = false) {
-    const selectedCells = document.querySelectorAll('div[contenteditable].selected, div[contenteditable].active');
-    if (selectedCells.length === 0) return;
-
-    saveState(Array.from(selectedCells));
-
-    const updatedRows = new Set();
-
-    selectedCells.forEach(c => {
-        if (property === 'backgroundColor') {
-            c.style[property] = value;
-        } else if (toggle) {
-            if (property === 'textDecoration') {
-                c.style[property] = c.style[property] === value ? 'none' : value;
-            } else {
-                c.style[property] = c.style[property] === value ? 'normal' : value;
-            }
-        } else {
-            c.style[property] = value;
-        }
-        const row = c.id.match(/[A-J]([0-9]+)/)[1];
-        updatedRows.add(row);
-    });
-
-    updatedRows.forEach(row => syncRowHeight(row));
-}
-
-// Инициализация таблицы
-window.onload = () => {
-    const container = document.getElementById("container");
-    if (!container) {
-        console.error("Контейнер #container не найден!");
-        return;
-    }
-    console.log("Инициализация таблицы...");
-    // Заголовок: пустая + A-J
-    const emptyHeader = createLabel("", "header-cell");
-    emptyHeader.addEventListener("click", clearSelection);
-    container.appendChild(emptyHeader);
-    charRange("A", "J").forEach(l => {
-        const header = createLabel(l, "header-cell");
-        header.addEventListener("click", () => selectColumn(l));
-        container.appendChild(header);
-    });
-    // Ряды с ячейками
-    range(1,99).forEach(r => {
-        const rowLabel = createLabel(r, "row-label");
-        rowLabel.addEventListener("click", () => selectRow(r));
-        container.appendChild(rowLabel);
-        charRange("A","J").forEach(c => {
-            const d = document.createElement("div");
-            d.className = "cell";
-            const cell = document.createElement("div");
-            cell.contentEditable = true;
-            cell.id = c + r;
-            console.log(`Создаём ячейку: ${cell.id}`); // Логирование для отладки
-            cell.addEventListener("input", (e) => {
-                saveState([e.target]);
-                onInput(e);
-            });
-            cell.addEventListener("blur", (e) => {
-                evaluateCellFormula(e.target);
-                // Сохраняем активную ячейку перед снятием выделения
-                lastActiveCell = e.target;
-                // Снимаем .active
-                e.target.classList.remove('active');
-                // Снимаем .selected, если выделена только эта ячейка
-                const selectedCells = document.querySelectorAll('div[contenteditable].selected');
-                if (selectedCells.length === 1 && selectedCells[0] === e.target) {
-                    e.target.classList.remove('selected');
-                }
-                // Если фокус ушёл на элемент панели инструментов, восстанавливаем выделение
-                setTimeout(() => {
-                    const activeElement = document.activeElement;
-                    if (activeElement && (activeElement.closest('.formatting') || activeElement.id === 'cell-editor')) {
-                        if (lastActiveCell) {
-                            lastActiveCell.classList.add('active');
-                            lastActiveCell.classList.add('selected');
-                        }
-                    }
-                }, 0);
-            });
-            cell.addEventListener("keydown", (e) => {
-                if (e.key === "Enter") {
-                    if (e.shiftKey) {
-                        // Shift + Enter: добавляем перенос строки
-                        e.preventDefault();
-                        const sel = window.getSelection();
-                        const range = sel.getRangeAt(0);
-                        range.deleteContents();
-                        range.insertNode(document.createTextNode('\n'));
-                        range.collapse(false);
-                        sel.removeAllRanges();
-                        sel.addRange(range);
-                    } else {
-                        // Enter: завершаем редактирование
-                        e.preventDefault();
-                        e.target.blur();
-                    }
-                } else if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-                    e.preventDefault();
-                    // Извлекаем текущие координаты ячейки
-                    const col = e.target.id.match(/([A-J])[0-9]+/)[1];
-                    const row = parseInt(e.target.id.match(/[A-J]([0-9]+)/)[1]);
-                    let newCol = col;
-                    let newRow = row;
-
-                    // Определяем новые координаты в зависимости от стрелки
-                    if (e.key === "ArrowUp" && row > 1) {
-                        newRow = row - 1;
-                    } else if (e.key === "ArrowDown" && row < 99) {
-                        newRow = row + 1;
-                    } else if (e.key === "ArrowLeft" && col !== "A") {
-                        newCol = String.fromCharCode(col.charCodeAt(0) - 1);
-                    } else if (e.key === "ArrowRight" && col !== "J") {
-                        newCol = String.fromCharCode(col.charCodeAt(0) + 1);
-                    }
-
-                    // Если координаты изменились, переходим на новую ячейку
-                    if (newCol !== col || newRow !== row) {
-                        // Сначала вызываем blur, чтобы применить изменения
-                        e.target.blur();
-                        // Находим новую ячейку
-                        const newCellId = `${newCol}${newRow}`;
-                        const newCell = document.getElementById(newCellId);
-                        if (newCell) {
-                            // Снимаем выделение со всех ячеек
-                            clearSelection();
-                            // Перемещаем фокус и выделяем новую ячейку
-                            newCell.focus();
-                            newCell.classList.add('active');
-                            newCell.classList.add('selected');
-                            // Обновляем строку редактирования
-                            const editor = document.getElementById('cell-editor');
-                            editor.value = newCell.textContent;
-                        }
-                    }
-                }
-            });
-            cell.addEventListener("mousedown", (e) => {
-                // Всегда снимаем выделение со всех ячеек
-                clearSelection();
-                isSelecting = true;
-                startCell = e.target.id;
-                // Выделяем только текущую ячейку
-                e.target.classList.add('selected');
-                document.querySelectorAll('div[contenteditable].active').forEach(c => c.classList.remove('active'));
-                e.target.classList.add('active');
-                const editor = document.getElementById('cell-editor');
-                editor.value = e.target.textContent;
-            });
-            cell.addEventListener("mousemove", (e) => {
-                if (isSelecting && startCell) {
-                    selectRange(startCell, e.target.id);
-                }
-            });
-            cell.addEventListener("mouseup", () => {
-                isSelecting = false;
-            });
-            cell.addEventListener("focus", () => {
-                document.querySelectorAll('div[contenteditable].active').forEach(c => c.classList.remove('active'));
-                cell.classList.add('active');
-                const editor = document.getElementById('cell-editor');
-                editor.value = cell.textContent;
-            });
-            d.appendChild(cell);
-            container.appendChild(d);
-        });
-    });
-
-    // Инициализация высоты строк
-    console.log("Инициализация высоты строк...");
-    range(1, 99).forEach(row => syncRowHeight(row));
-
-    // Проверка видимости ячеек
-    const firstCell = document.getElementById("A1");
-    if (firstCell) {
-        console.log("Ячейка A1 создана, видимость:", window.getComputedStyle(firstCell).display);
-        console.log("Размеры ячейки A1:", firstCell.offsetWidth, "x", firstCell.offsetHeight);
-    } else {
-        console.error("Ячейка A1 не найдена!");
-    }
-
-    // Завершение выделения при отпускании мыши на документе
-    document.addEventListener("mouseup", () => {
-        isSelecting = false;
-    });
-
-    // Обработка копирования и отмены
-    document.addEventListener("keydown", (e) => {
-        if (e.ctrlKey && e.key === 'c') {
-            e.preventDefault();
-            copySelectedCells();
-        } else if (e.ctrlKey && e.key.toLowerCase() === 'z') {
-            e.preventDefault();
-            undo();
-        }
-    });
-
-    // Обработка вставки
-    document.addEventListener("paste", (e) => {
-        const activeCell = document.querySelector('div[contenteditable].active');
-        if (!activeCell) return;
-        e.preventDefault();
-        const text = e.clipboardData.getData('text');
-        pasteToCells(activeCell.id, text);
-        const editor = document.getElementById('cell-editor');
-        editor.value = activeCell.textContent;
-    });
-
-    // Обработка строки редактирования
-    const editor = document.getElementById('cell-editor');
-    editor.addEventListener('input', () => {
-        const activeCell = document.querySelector('div[contenteditable].active');
-        if (activeCell) {
-            saveState([activeCell]);
-            activeCell.textContent = editor.value;
-            const row = activeCell.id.match(/[A-J]([0-9]+)/)[1];
-            debouncedSync(row);
-        }
-    });
-
-    // Обработка форматирования
-    document.getElementById('undo').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        undo();
-    });
-    document.getElementById('font-family').addEventListener('change', (e) => {
-        e.preventDefault();
-        applyFormatting('fontFamily', e.target.value);
-    });
-    document.getElementById('font-size').addEventListener('change', (e) => {
-        e.preventDefault();
-        const size = Math.min(Math.max(parseInt(e.target.value), 8), 72);
-        applyFormatting('fontSize', `${size}px`);
-        e.target.value = size;
-    });
-    document.getElementById('bold').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        applyFormatting('fontWeight', 'bold', true);
-    });
-    document.getElementById('italic').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        applyFormatting('fontStyle', 'italic', true);
-    });
-    document.getElementById('underline').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        applyFormatting('textDecoration', 'underline', true);
-    });
-    document.getElementById('align-left').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        applyFormatting('textAlign', 'left');
-    });
-    document.getElementById('align-center').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        applyFormatting('textAlign', 'center');
-    });
-    document.getElementById('align-right').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        applyFormatting('textAlign', 'right');
-    });
-    document.getElementById('align-justify').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        applyFormatting('textAlign', 'justify');
-    });
-    document.getElementById('background-color').addEventListener('change', (e) => {
-        e.preventDefault();
-        applyFormatting('backgroundColor', e.target.value);
-        document.getElementById('background-color').style.backgroundColor = e.target.value;
-    });
-    document.getElementById('fill-color').addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const colorSelect = document.getElementById('background-color');
-        applyFormatting('backgroundColor', colorSelect.value);
-    });
 };
+
+const startGame = () => {
+    canvas.style.display = "block";
+    startScreen.style.display = "none";
+    animate();
+};
+
+const showCheckpointScreen = (msg) => {
+    checkpointScreen.style.display = "block";
+    checkpointMessage.textContent = msg;
+    if (isCheckpointCollisionDetectionActive) {
+        setTimeout(() => (checkpointScreen.style.display = "none"), 2000);
+    }
+};
+
+startBtn.addEventListener("click", startGame);
+restartBtn.addEventListener("click", () => location.reload());
+window.addEventListener("keydown", ({ key }) => movePlayer(key, 8, true));
+window.addEventListener("keyup", ({ key }) => movePlayer(key, 0, false));
+
+updateLives();
