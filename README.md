@@ -38,13 +38,6 @@ pgsql
 - Vanilla JavaScript (no frameworks)
 - Reddit API (public access)
 
-## 🧠 Inspiration
-
-This project is part of a learning challenge inspired by freeCodeCamp and practical UI exercises to improve API work, DOM manipulation, and responsive design.
-
-## 📸 Preview
-
-> Coming soon — add screenshot or GitHub Pages link.
 
 ## 📜 License
 
