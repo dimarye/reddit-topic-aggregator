@@ -1,211 +1,181 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
 :root {
-    --main-bg-color: #0a0a23; /* Dark Tron-like background */
-    --neon-blue: #00d4ff; /* Tron primary neon */
-    --neon-orange: #ff3d00; /* Tron secondary neon */
-    --section-bg-color: rgba(10, 10, 35, 0.9); /* Semi-transparent dark blue */
-    --glow-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff, 0 0 30px #00d4ff;
+    --font-main: 'Segoe UI', sans-serif;
+    --color-bg-light: #f9f9f9;
+    --color-bg-dark: #1a1a1a;
+    --color-text-light: #1a1a1a;
+    --color-text-dark: #f9f9f9;
+    --color-accent: #ff4500;
+    --color-border: #ccc;
+    --color-border-dark: #444;
+    --color-hover: #ffe5d1;
+    --transition: 0.3s ease;
 }
 
 body {
-    background-color: var(--main-bg-color);
-    background-image: linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
-    background-size: 50px 50px; /* Tron grid pattern */
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-main);
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-bg-light);
+    color: var(--color-text-light);
+    transition: background-color var(--transition), color var(--transition);
 }
 
-.start-screen {
-    background-color: var(--section-bg-color);
-    width: 100%;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-right: -50%;
-    transform: translate(-50%, -50%);
-    border-radius: 10px;
-    padding: 20px;
-    padding-bottom: 5px;
-    border: 2px solid var(--neon-blue);
-    box-shadow: var(--glow-shadow);
+body.dark {
+    background-color: var(--color-bg-dark);
+    color: var(--color-text-dark);
 }
 
-.main-title {
+nav {
+    display: flex;
+    justify-content: center; /* центрирует по горизонтали */
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background-color: var(--color-accent);
+    position: relative;
+}
+
+.fcc-logo {
+    height: 40px;
+}
+
+.theme-toggle {
+    background: transparent;
+    border: 2px solid white;
+    border-radius: 5px;
+    color: #808080;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color var(--transition);
+}
+
+.theme-toggle:hover {
+    background-color: white;
+    color: var(--color-accent);
+}
+
+.title {
     text-align: center;
-    color: var(--neon-blue);
-    text-shadow: 0 0 5px var(--neon-blue);
-    font-size: 2.5rem;
-    letter-spacing: 2px;
+    font-size: 2rem;
+    margin: 1rem 0;
 }
 
-.instructions {
+.filter-container {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.filter-btn {
+    padding: 0.5rem 1rem;
+    margin: 0.2rem;
+    border: 1px solid var(--color-border);
+    background-color: white;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all var(--transition);
+}
+
+.filter-btn.active {
+    background-color: var(--color-accent);
+    color: white;
+    font-weight: bold;
+}
+
+body.dark .filter-btn {
+    background-color: #333;
+    color: white;
+    border: 1px solid var(--color-border-dark);
+}
+
+body.dark .filter-btn.active {
+    background-color: var(--color-accent);
+    color: #fff;
+}
+
+.loading, .error {
     text-align: center;
     font-size: 1.2rem;
-    margin: 15px;
-    line-height: 2rem;
-    color: #ffffff;
-    text-shadow: 0 0 3px var(--neon-blue);
+    margin: 1rem;
 }
 
-.btn {
+.table-wrapper {
+    overflow-x: auto;
+    margin: 1rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    transition: background-color var(--transition);
+}
+
+body.dark table {
+    background-color: #2a2a2a;
+}
+
+th, td {
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+
+body.dark th, body.dark td {
+    border-bottom: 1px solid var(--color-border-dark);
+}
+
+th.sortable {
     cursor: pointer;
-    width: 120px;
-    margin: 10px auto;
-    color: #ffffff;
-    font-size: 18px;
-    background-color: transparent;
-    border: 2px solid var(--neon-orange);
-    border-radius: 5px;
-    padding: 10px;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 0 10px var(--neon-orange);
-    transition: all 0.3s ease;
 }
 
-.btn:hover {
-    background-color: var(--neon-orange);
-    color: var(--main-bg-color);
-    box-shadow: 0 0 15px var(--neon-orange), 0 0 25px var(--neon-orange);
-    transform: translateY(-2px);
-}
-
-.btn:active {
-    transform: scale(0.95);
-}
-
-.btn-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.checkpoint-screen {
-    position: absolute;
-    left: 0;
-    right: 0;
-    margin-left: auto;
-    margin-right: auto;
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-    background-color: var(--section-bg-color);
-    border-radius: 10px;
-    padding: 15px;
-    border: 2px solid var(--neon-blue);
-    box-shadow: var(--glow-shadow);
-    display: none;
-    animation: fadeIn 0.5s ease-in;
-}
-
-.checkpoint-screen p {
-    color: var(--neon-blue);
-    text-shadow: 0 0 5px var(--neon-blue);
-    font-size: 1.5rem;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.hud {
-    position: fixed;
-    top: 10px;
-    right: 20px;
-    background-color: rgba(10, 10, 35, 0.8);
-    padding: 10px 16px;
-    border-radius: 5px;
-    border: 1px solid var(--neon-blue);
-    color: var(--neon-blue);
-    font-size: 16px;
+.sort-indicator {
+    margin-left: 5px;
     font-weight: bold;
-    text-shadow: 0 0 3px var(--neon-blue);
-    z-index: 10;
 }
 
-.restart-screen {
-    position: absolute;
-    left: 0;
-    right: 0;
-    margin-left: auto;
-    margin-right: auto;
-    top: 40%;
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-    background-color: var(--section-bg-color);
-    border-radius: 10px;
-    padding: 20px;
-    border: 2px solid var(--neon-orange);
-    box-shadow: 0 0 10px var(--neon-orange);
-    display: none;
+.avatar-container img {
+    border-radius: 50%;
 }
 
-.restart-screen p {
-    color: var(--neon-orange);
-    text-shadow: 0 0 5px var(--neon-orange);
-    font-size: 1.5rem;
+.post-title {
+    font-weight: bold;
+    text-decoration: none;
+    color: var(--color-accent);
 }
 
-#canvas {
-    display: none;
-    background-image: linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
-    background-size: 50px 50px; /* Tron grid on canvas */
+.post-title:hover {
+    text-decoration: underline;
 }
 
-.lives-container {
-    position: fixed;
-    top: 10px;
-    left: 20px;
-    display: flex;
-    gap: 8px;
-    z-index: 20;
-    font-size: 24px;
-    user-select: none;
-    background: rgba(10, 10, 35, 0.8);
-    padding: 8px;
-    border-radius: 5px;
-    border: 1px solid var(--neon-blue);
+.category {
+    display: inline-block;
+    margin-top: 5px;
+    font-size: 0.85rem;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background-color: #eee;
 }
 
-.lives-container .heart {
-    color: var(--neon-orange);
-    text-shadow: 0 0 5px var(--neon-orange);
-    cursor: default;
-    transition: opacity 0.3s ease;
-}
+.sports-row { background-color: #e7f2ff; }
+.health-row { background-color: #eaffe5; }
+.celebrities-row { background-color: #fff0f6; }
 
-.lives-container .heart:not(.lost) {
-    animation: pulse 1.5s infinite ease-in-out;
-}
+body.dark .sports-row { background-color: #243547; }
+body.dark .health-row { background-color: #1f3c29; }
+body.dark .celebrities-row { background-color: #3c1d2d; }
 
-.lives-container .heart.lost {
-    opacity: 0.3;
-    text-shadow: none;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-@media (min-width: 768px) {
-    .start-screen {
-        width: 60%;
-        max-width: 700px;
+/* Responsive */
+@media (max-width: 768px) {
+    .title {
+        font-size: 1.5rem;
     }
 
-    .checkpoint-screen {
-        max-width: 400px;
+    .filter-btn {
+        margin: 0.1rem;
+        padding: 0.3rem 0.7rem;
+    }
+
+    th, td {
+        padding: 0.5rem;
     }
 }

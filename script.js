@@ -1,448 +1,215 @@
-const startBtn = document.getElementById("start-btn");
-const canvas = document.getElementById("canvas");
-const startScreen = document.querySelector(".start-screen");
-const checkpointScreen = document.querySelector(".checkpoint-screen");
-const checkpointMessage = document.querySelector(".checkpoint-screen > p");
-const checkpointProgress = document.getElementById("checkpoint-progress");
-const restartScreen = document.querySelector(".restart-screen");
-const restartBtn = document.getElementById("restart-btn");
-const livesContainer = document.getElementById("lives");
-const jumpSound = new Audio("jump.wav");
-const checkpointSound = new Audio("checkpoint.wav");
-const goalSound = new Audio("goal.wav");
+const subreddits = [
+    { name: "sports", category: "Sports", className: "sports" },
+    { name: "nba", category: "Sports", className: "sports" },
+    { name: "health", category: "Health", className: "health" },
+    { name: "fitness", category: "Health", className: "health" },
+    { name: "popculturechat", category: "Celebrities", className: "celebrities" },
+    { name: "Fauxmoi", category: "Celebrities", className: "celebrities" }
+];
+const baseUrl = "https://www.reddit.com/r/";
+const userBaseUrl = "https://www.reddit.com/user/";
+const userAgent = "web:reddit-topic-aggregator:v1.0.0 (by /u/yourusername)";
+const cacheKey = "reddit_posts_cache";
+const cacheTTL = 5 * 60 * 1000; // 5 minutes
 
-const ctx = canvas.getContext("2d");
-canvas.width = innerWidth;
-canvas.height = innerHeight;
-const gravity = 0.5;
-let isCheckpointCollisionDetectionActive = true;
-let lives = 3;
+const postsContainer = document.getElementById("posts-container");
+const loading = document.getElementById("loading");
+const error = document.getElementById("error");
+const filterButtons = document.querySelectorAll(".filter-btn");
+const sortableHeaders = document.querySelectorAll(".sortable");
 
-const proportionalSize = (size) => {
-    return innerHeight < 500 ? Math.ceil((size / 500) * innerHeight) : size;
+let sortState = { column: "created_utc", direction: "desc" };
+
+const forumCategory = (subredditName) => {
+    const subreddit = subreddits.find(s => s.name === subredditName) || { category: "General", className: "general" };
+    const url = `${baseUrl}${subreddit.name}`;
+    return `<a href="${url}" class="category ${subreddit.className}" target="_blank">${subreddit.category}</a>`;
 };
 
-class Player {
-    constructor() {
-        this.position = { x: proportionalSize(10), y: proportionalSize(400) };
-        this.velocity = { x: 0, y: 0 };
-        this.width = proportionalSize(40);
-        this.height = proportionalSize(40);
+const timeAgo = (createdUtc) => {
+    const currentTime = new Date();
+    const postTime = new Date(createdUtc * 1000);
+    const timeDifference = currentTime - postTime;
+    const msPerMinute = 1000 * 60;
+    const minutesAgo = Math.floor(timeDifference / msPerMinute);
+    const hoursAgo = Math.floor(minutesAgo / 60);
+    const daysAgo = Math.floor(hoursAgo / 24);
+    if (minutesAgo < 60) return `${minutesAgo}m ago`;
+    if (hoursAgo < 24) return `${hoursAgo}h ago`;
+    return `${daysAgo}d ago`;
+};
+
+const getCachedData = () => {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < cacheTTL) return data;
     }
+    return null;
+};
 
-    draw() {
-        ctx.save();
-        ctx.fillStyle = "#00d4ff";
-        ctx.shadowColor = "#00d4ff";
-        ctx.shadowBlur = 15;
-        if (this.velocity.y < 0) {
-            ctx.beginPath();
-            ctx.arc(this.position.x + this.width / 2, this.position.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
-        }
-        ctx.restore();
-    }
+const setCachedData = (data) => {
+    localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+};
 
-    update() {
-        this.draw();
-        this.position.x += this.velocity.x;
-        this.position.y += this.velocity.y;
-
-        if (this.position.y + this.height + this.velocity.y <= canvas.height) {
-            if (this.position.y < 0) {
-                this.position.y = 0;
-                this.velocity.y = gravity;
-            }
-            this.velocity.y += gravity;
-        } else {
-            this.velocity.y = 0;
-        }
-
-        if (this.position.x < this.width) {
-            this.position.x = this.width;
-        }
-
-        if (this.position.x >= canvas.width - this.width * 2) {
-            this.position.x = canvas.width - this.width * 2;
-        }
-    }
-}
-
-class Platform {
-    constructor(x, y) {
-        this.position = { x, y };
-        this.width = 200;
-        this.height = proportionalSize(40);
-    }
-
-    draw() {
-        ctx.save();
-        ctx.fillStyle = "#00d4ff";
-        ctx.strokeStyle = "#00d4ff";
-        ctx.lineWidth = 2;
-        ctx.shadowColor = "#00d4ff";
-        ctx.shadowBlur = 10;
-        ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
-        ctx.strokeRect(this.position.x, this.position.y, this.width, this.height);
-        ctx.restore();
-    }
-}
-
-class CheckPoint {
-    constructor(x, y, z) {
-        this.position = { x, y };
-        this.width = proportionalSize(40);
-        this.height = proportionalSize(70);
-        this.claimed = false;
-        this.scale = 1;
-    }
-
-    draw() {
-        if (!this.claimed) {
-            ctx.save();
-            ctx.fillStyle = "#ff3d00";
-            ctx.strokeStyle = "#ff3d00";
-            ctx.lineWidth = 2;
-            ctx.shadowColor = "#ff3d00";
-            ctx.shadowBlur = 15;
-            ctx.fillRect(this.position.x, this.position.y, this.width * this.scale, this.height * this.scale);
-            ctx.strokeRect(this.position.x, this.position.y, this.width * this.scale, this.height * this.scale);
-            ctx.restore();
-        }
-    }
-
-    claim() {
-        this.claimed = true;
-        let animationFrame;
-        const particles = [];
-        for (let i = 0; i < 30; i++) {
-            particles.push({
-                x: this.position.x + this.width / 2,
-                y: this.position.y + this.height / 2,
-                vx: (Math.random() - 0.5) * 6,
-                vy: (Math.random() - 0.5) * 6,
-                radius: Math.random() * 4 + 2,
-                alpha: 1
-            });
-        }
-        const animateParticles = () => {
-            ctx.save();
-            particles.forEach(p => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.alpha -= 0.02;
-                ctx.fillStyle = `rgba(255, 61, 0, ${p.alpha})`;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.restore();
-            if (particles.some(p => p.alpha > 0)) {
-                animationFrame = requestAnimationFrame(animateParticles);
-            } else {
-                cancelAnimationFrame(animationFrame);
-            }
-        };
-        animateParticles();
-        const animateShrink = () => {
-            if (this.scale > 0.01) {
-                this.scale -= 0.01;
-                animationFrame = requestAnimationFrame(animateShrink);
-            } else {
-                cancelAnimationFrame(animationFrame);
-                this.width = 0;
-                this.height = 0;
-                this.position.y = Infinity;
-            }
-        };
-        animateShrink();
-    }
-}
-
-class Enemy {
-    constructor(x, y, vertical = false) {
-        this.position = { x, y };
-        this.width = proportionalSize(40);
-        this.height = proportionalSize(40);
-        this.speed = 2;
-        this.direction = 1;
-        this.vertical = vertical;
-
-        if (vertical) {
-            this.minY = y - 50;
-            this.maxY = y + 50;
-        }
-    }
-
-    setBounds(minX, maxX) {
-        this.minX = minX;
-        this.maxX = maxX;
-    }
-
-    draw() {
-        ctx.save();
-        ctx.fillStyle = "#ff3d00";
-        ctx.strokeStyle = "#ff3d00";
-        ctx.lineWidth = 2;
-        ctx.shadowColor = "#ff3d00";
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.moveTo(this.position.x + this.width / 2, this.position.y);
-        ctx.lineTo(this.position.x + this.width, this.position.y + this.height);
-        ctx.lineTo(this.position.x, this.position.y + this.height);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-    }
-
-    update() {
-        this.draw();
-
-        if (this.vertical) {
-            this.position.y += this.speed * this.direction;
-            if (this.position.y <= this.minY || this.position.y + this.height >= this.maxY) {
-                this.direction *= -1;
-            }
-        } else {
-            this.position.x += this.speed * this.direction;
-            if (this.position.x <= this.minX || this.position.x + this.width >= this.maxX) {
-                this.direction *= -1;
-            }
-        }
-    }
-}
-
-const player = new Player();
-
-const platformPositions = [
-    { x: 500, y: proportionalSize(450) },
-    { x: 700, y: proportionalSize(400) },
-    { x: 850, y: proportionalSize(350) },
-    { x: 900, y: proportionalSize(350) },
-    { x: 1050, y: proportionalSize(150) },
-    { x: 2500, y: proportionalSize(450) },
-    { x: 2900, y: proportionalSize(400) },
-    { x: 3150, y: proportionalSize(350) },
-    { x: 3900, y: proportionalSize(450) },
-    { x: 4200, y: proportionalSize(400) },
-    { x: 4400, y: proportionalSize(200) },
-    { x: 4700, y: proportionalSize(150) },
-];
-
-const platforms = platformPositions.map(p => new Platform(p.x, p.y));
-
-const checkpointPositions = [
-    { x: 1170, y: proportionalSize(80), z: 1 },
-    { x: 2900, y: proportionalSize(330), z: 2 },
-    { x: 4800, y: proportionalSize(80), z: 3 },
-];
-
-const checkpoints = checkpointPositions.map(c => new CheckPoint(c.x, c.y, c.z));
-
-const enemies = [];
-
-const enemy1 = new Enemy(1400, proportionalSize(410));
-enemy1.setBounds(1400, 1600);
-enemies.push(enemy1);
-
-const enemy2 = new Enemy(3300, proportionalSize(310));
-enemy2.setBounds(3300, 3550);
-enemies.push(enemy2);
-
-const spawnEnemiesForCheckpoint = (index) => {
-    if (index === 0) return;
-    for (let i = 0; i < index * 2; i++) {
-        const x = 1000 + Math.random() * 3000;
-        const y = proportionalSize(400 - Math.random() * 200);
-        const vertical = Math.random() > 0.5;
-        const enemy = new Enemy(x, y, vertical);
-        if (!vertical) {
-            enemy.setBounds(x - 100, x + 100);
-        }
-        enemies.push(enemy);
+const fetchAvatar = async (author) => {
+    try {
+        const res = await fetch(`${userBaseUrl}${author}/about.json`, {
+            headers: { "User-Agent": userAgent }
+        });
+        const data = await res.json();
+        return data.data.icon_img || "https://www.redditstatic.com/avatars/defaults/avatar_default_7.png";
+    } catch {
+        return "https://www.redditstatic.com/avatars/defaults/avatar_default_7.png";
     }
 };
 
-const updateLives = () => {
-    const hearts = livesContainer.querySelectorAll(".heart");
-    hearts.forEach((heart, index) => {
-        if (index < lives) {
-            heart.classList.remove("lost");
-        } else {
-            heart.classList.add("lost");
+const sortPosts = (posts, column, direction) => {
+    return [...posts].sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+        if (column === "title") {
+            valA = valA.toLowerCase();
+            valB = valB.toLowerCase();
+            return direction === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
         }
+        return direction === "asc" ? valA - valB : valB - valA;
     });
 };
 
-const animate = () => {
-    requestAnimationFrame(animate);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    platforms.forEach(p => p.draw());
-    checkpoints.forEach(cp => cp.draw());
-    enemies.forEach(enemy => enemy.update());
-    player.update();
-
-    if (keys.rightKey.pressed && player.position.x < proportionalSize(400)) {
-        player.velocity.x = 5;
-    } else if (keys.leftKey.pressed && player.position.x > proportionalSize(100)) {
-        player.velocity.x = -5;
-    } else {
-        player.velocity.x = 0;
-
-        if (keys.rightKey.pressed && isCheckpointCollisionDetectionActive) {
-            platforms.forEach(p => p.position.x -= 5);
-            checkpoints.forEach(cp => cp.position.x -= 5);
-            enemies.forEach(e => {
-                e.position.x -= 5;
-                if (!e.vertical) {
-                    e.minX -= 5;
-                    e.maxX -= 5;
-                }
-            });
-        } else if (keys.leftKey.pressed && isCheckpointCollisionDetectionActive) {
-            platforms.forEach(p => p.position.x += 5);
-            checkpoints.forEach(cp => cp.position.x += 5);
-            enemies.forEach(e => {
-                e.position.x += 5;
-                if (!e.vertical) {
-                    e.minX += 5;
-                    e.maxX += 5;
-                }
-            });
-        }
-    }
-
-    platforms.forEach(p => {
-        const above = player.position.y + player.height <= p.position.y;
-        const fallingOnto = player.position.y + player.height + player.velocity.y >= p.position.y;
-        const withinX = player.position.x >= p.position.x - player.width / 2 &&
-            player.position.x <= p.position.x + p.width - player.width / 3;
-
-        if (above && fallingOnto && withinX) {
-            player.velocity.y = 0;
+const fetchData = async () => {
+    loading.style.display = "block";
+    error.style.display = "none";
+    try {
+        const cachedPosts = getCachedData();
+        if (cachedPosts) {
+            showLatestPosts(cachedPosts);
+            loading.style.display = "none";
             return;
         }
 
-        const overlappingY = player.position.y + player.height >= p.position.y &&
-            player.position.y <= p.position.y + p.height;
-
-        if (withinX && overlappingY) {
-            player.position.y = p.position.y + player.height;
-            player.velocity.y = gravity;
+        const allPosts = [];
+        for (const subreddit of subreddits) {
+            const res = await fetch(`${baseUrl}${subreddit.name}/new.json?limit=5`, {
+                headers: { "User-Agent": userAgent }
+            });
+            if (!res.ok) throw new Error(`Failed to fetch /r/${subreddit.name}`);
+            const data = await res.json();
+            const posts = data.data.children.map(post => ({
+                subreddit: subreddit.name,
+                title: post.data.title,
+                permalink: `https://www.reddit.com${post.data.permalink}`,
+                num_comments: post.data.num_comments,
+                ups: post.data.ups,
+                created_utc: post.data.created_utc,
+                author: post.data.author
+            }));
+            allPosts.push(...posts);
         }
-    });
 
-    checkpoints.forEach((checkpoint, index, checkpoints) => {
-        const validCollision = player.position.x >= checkpoint.position.x &&
-            player.position.y >= checkpoint.position.y &&
-            player.position.y + player.height <= checkpoint.position.y + checkpoint.height &&
-            isCheckpointCollisionDetectionActive &&
-            player.position.x - player.width <= checkpoint.position.x - checkpoint.width + player.width * 0.9 &&
-            (index === 0 || checkpoints[index - 1].claimed);
+        const postsWithAvatars = await Promise.all(
+            allPosts.slice(0, 10).map(async (post) => ({
+                ...post,
+                avatar: await fetchAvatar(post.author)
+            }))
+        );
+        const remainingPosts = allPosts.slice(10).map(post => ({
+            ...post,
+            avatar: "https://www.redditstatic.com/avatars/defaults/avatar_default_7.png"
+        }));
+        const finalPosts = [...postsWithAvatars, ...remainingPosts];
 
-        if (validCollision) {
-            checkpoint.claim();
-
-            const claimedCount = checkpoints.filter(cp => cp.claimed).length;
-            checkpointProgress.textContent = `Node: ${claimedCount} of ${checkpoints.length}`;
-
-            checkpointSound.currentTime = 0;
-            checkpointSound.play();
-
-            spawnEnemiesForCheckpoint(index);
-
-            if (index === checkpoints.length - 1) {
-                goalSound.currentTime = 0;
-                goalSound.play();
-
-                isCheckpointCollisionDetectionActive = false;
-                showCheckpointScreen("Grid Mastered!");
-                movePlayer("ArrowRight", 0, false);
-                restartScreen.style.display = "block";
-            } else {
-                showCheckpointScreen("Node Synced!");
-            }
-        }
-    });
-
-    enemies.forEach(enemy => {
-        const isColliding =
-            player.position.x < enemy.position.x + enemy.width &&
-            player.position.x + player.width > enemy.position.x &&
-            player.position.y < enemy.position.y + enemy.height &&
-            player.position.y + player.height > enemy.position.y;
-
-        if (isColliding && isCheckpointCollisionDetectionActive) {
-            lives--;
-            updateLives();
-            if (lives <= 0) {
-                showCheckpointScreen("System Crash!");
-                isCheckpointCollisionDetectionActive = false;
-                restartScreen.style.display = "block";
-            } else {
-                player.position.x = proportionalSize(10);
-                player.position.y = proportionalSize(400);
-                player.velocity.x = 0;
-                player.velocity.y = 0;
-            }
-        }
-    });
-};
-
-const keys = {
-    rightKey: { pressed: false },
-    leftKey: { pressed: false },
-};
-
-const movePlayer = (key, xVelocity, isPressed) => {
-    if (!isCheckpointCollisionDetectionActive) {
-        player.velocity.x = 0;
-        player.velocity.y = 0;
-        return;
-    }
-
-    switch (key) {
-        case "ArrowLeft":
-            keys.leftKey.pressed = isPressed;
-            if (xVelocity === 0) player.velocity.x = 0;
-            player.velocity.x -= xVelocity;
-            break;
-        case "ArrowUp":
-        case " ":
-        case "Spacebar":
-            player.velocity.y -= 8;
-            jumpSound.currentTime = 0;
-            jumpSound.play();
-            break;
-        case "ArrowRight":
-            keys.rightKey.pressed = isPressed;
-            if (xVelocity === 0) player.velocity.x = 0;
-            player.velocity.x += xVelocity;
-            break;
+        setCachedData(finalPosts);
+        showLatestPosts(finalPosts);
+        loading.style.display = "none";
+    } catch (err) {
+        console.error("Error fetching Reddit data:", err);
+        error.textContent = "Failed to load posts. Please try again later.";
+        error.style.display = "block";
+        loading.style.display = "none";
     }
 };
 
-const startGame = () => {
-    canvas.style.display = "block";
-    startScreen.style.display = "none";
-    animate();
+const showLatestPosts = (posts, filter = "all") => {
+    const filteredPosts = filter === "all" ? posts : posts.filter(post => {
+        const subreddit = subreddits.find(s => s.name === post.subreddit);
+        return subreddit && subreddit.category.toLowerCase() === filter;
+    });
+    const sortedPosts = sortPosts(filteredPosts, sortState.column, sortState.direction);
+    postsContainer.innerHTML = sortedPosts.map(post => {
+        const subreddit = subreddits.find(s => s.name === post.subreddit) || { className: "general" };
+        return `
+        <tr class="${subreddit.className}-row">
+            <td>
+                <a href="${post.permalink}" target="_blank" class="post-title">${post.title}</a>
+                ${forumCategory(post.subreddit)}
+            </td>
+            <td>
+                <div class="avatar-container">
+                    <img src="${post.avatar}" alt="${post.author}" width="30" height="30">
+                </div>
+            </td>
+            <td>${post.num_comments}</td>
+            <td>${post.ups}</td>
+            <td>${timeAgo(post.created_utc)}</td>
+        </tr>
+    `;
+    }).join("");
+    updateSortIndicators();
 };
 
-const showCheckpointScreen = (msg) => {
-    checkpointScreen.style.display = "block";
-    checkpointMessage.textContent = msg;
-    if (isCheckpointCollisionDetectionActive) {
-        setTimeout(() => (checkpointScreen.style.display = "none"), 2000);
-    }
+const updateSortIndicators = () => {
+    sortableHeaders.forEach(header => {
+        const indicator = header.querySelector(".sort-indicator");
+        header.classList.remove("active", "asc", "desc");
+        if (header.dataset.sort === sortState.column) {
+            header.classList.add("active", sortState.direction);
+            indicator.textContent = sortState.direction === "asc" ? "↑" : "↓";
+        } else {
+            indicator.textContent = "";
+        }
+    });
 };
 
-startBtn.addEventListener("click", startGame);
-restartBtn.addEventListener("click", () => location.reload());
-window.addEventListener("keydown", ({ key }) => movePlayer(key, 8, true));
-window.addEventListener("keyup", ({ key }) => movePlayer(key, 0, false));
+sortableHeaders.forEach(header => {
+    header.addEventListener("click", () => {
+        const column = header.dataset.sort;
+        if (sortState.column === column) {
+            sortState.direction = sortState.direction === "asc" ? "desc" : "asc";
+        } else {
+            sortState.column = column;
+            sortState.direction = column === "title" ? "asc" : "desc";
+        }
+        const cachedPosts = getCachedData();
+        if (cachedPosts) {
+            const currentFilter = document.querySelector(".filter-btn.active").dataset.category;
+            showLatestPosts(cachedPosts, currentFilter);
+        }
+    });
+});
 
-updateLives();
+filterButtons.forEach(button => {
+    button.addEventListener("click", () => {
+        filterButtons.forEach(btn => btn.classList.remove("active"));
+        button.classList.add("active");
+        const filter = button.dataset.category;
+        const table = document.querySelector("table");
+        // Remove all category background classes
+        table.classList.remove("sports-bg", "health-bg", "celebrities-bg", "general-bg", "all-bg");
+        // Add the appropriate background class based on filter
+        table.classList.add(`${filter}-bg`);
+        const cachedPosts = getCachedData();
+        if (cachedPosts) showLatestPosts(cachedPosts, filter);
+    });
+});
+
+fetchData();
+
+const toggleBtn = document.getElementById("theme-toggle");
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme === "dark") document.body.classList.add("dark");
+
+toggleBtn.addEventListener("click", () => {
+    document.body.classList.toggle("dark");
+    localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+});

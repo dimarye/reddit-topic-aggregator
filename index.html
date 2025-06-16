@@ -3,39 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Code Warrior: Tron Grid</title>
+  <title>Reddit Latest Topics</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="start-screen">
-  <h1 class="main-title">Code Warrior: Tron Grid</h1>
-  <p class="instructions">
-    Navigate the digital grid to reach the neon checkpoints.<br>
-    Use arrow keys to move and spacebar to jump.
-  </p>
-  <div class="btn-container">
-    <div class="btn" id="start-btn">Enter Grid</div>
-  </div>
+<nav>
+  <img src="https://www.redditstatic.com/desktop2x/img/favicon/apple-icon-76x76.png" alt="Reddit Logo" class="fcc-logo">
+</nav>
+<button class="theme-toggle" id="theme-toggle">Toggle Theme</button>
+
+<h1 class="title">Latest Reddit Topics</h1>
+<div class="filter-container">
+  <button class="filter-btn active" data-category="all">All</button>
+  <button class="filter-btn" data-category="sports">Sports</button>
+  <button class="filter-btn" data-category="health">Health</button>
+  <button class="filter-btn" data-category="celebrities">Celebrities</button>
 </div>
-
-<div class="checkpoint-screen">
-  <p>System Sync Complete!</p>
+<div class="loading" id="loading">Loading...</div>
+<div class="error" id="error" style="display: none;"></div>
+<div class="table-wrapper">
+  <table>
+    <thead>
+    <tr>
+      <th id="topics" class="sortable" data-sort="title">Topics <span class="sort-indicator"></span></th>
+      <th>Avatars</th>
+      <th class="sortable" data-sort="num_comments">Replies <span class="sort-indicator"></span></th>
+      <th class="sortable" data-sort="ups">Upvotes <span class="sort-indicator"></span></th>
+      <th class="sortable active desc" data-sort="created_utc">Activity <span class="sort-indicator"></span></th>
+    </tr>
+    </thead>
+    <tbody id="posts-container"></tbody>
+  </table>
 </div>
-
-<div class="hud" id="checkpoint-progress">Node: 0 of 3</div>
-
-<div class="restart-screen">
-  <p>Grid Mastered!</p>
-  <div class="btn" id="restart-btn">Re-enter Grid</div>
-</div>
-
-<div class="lives-container" id="lives">
-  <span class="heart">◉</span>
-  <span class="heart">◉</span>
-  <span class="heart">◉</span>
-</div>
-
-<canvas id="canvas"></canvas>
 <script src="script.js"></script>
 </body>
 </html>
